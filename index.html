@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>약수 및 최대공약수 게임</title>
+    <!-- MathJax 라이브러리 로드 -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f8ff;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        #start-screen, #game-screen, #end-screen {
+            display: none;
+            padding: 20px;
+        }
+        #start-screen.visible, #game-screen.visible, #end-screen.visible {
+            display: block;
+        }
+        h1 {
+            color: #2e8b57;
+            margin-bottom: 10px;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .button {
+            padding: 15px 25px;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background-color: #20b2aa;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #3cb371;
+        }
+        #energy-bar {
+            width: 100%;
+            height: 25px;
+            background-color: #eee;
+            margin: 20px 0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #energy {
+            height: 100%;
+            background-color: #ff6347;
+            width: 100%;
+            transition: width 0.2s linear;
+        }
+        #stats {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        #message {
+            font-size: 22px;
+            color: #dc143c;
+            margin-top: 20px;
+            min-height: 30px;
+        }
+        .question-container {
+            margin: 20px 0;
+            text-align: left;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .question {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        .options {
+            list-style-type: none;
+            padding: 0;
+        }
+        .options li {
+            margin: 10px 0;
+        }
+        .option-button {
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            border: 2px solid #20b2aa;
+            border-radius: 8px;
+            background-color: white;
+            transition: background-color 0.3s, color 0.3s;
+            width: 100%;
+            text-align: left;
+        }
+        .option-button:hover {
+            background-color: #20b2aa;
+            color: white;
+        }
+        .option-button.correct {
+            background-color: #32cd32;
+            color: white;
+            border-color: #32cd32;
+        }
+        .option-button.incorrect {
+            background-color: #ff6347;
+            color: white;
+            border-color: #ff6347;
+        }
+        #next-button {
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background-color: #32cd32;
+            color: white;
+            transition: background-color 0.3s;
+            display: none;
+            margin-top: 20px;
+        }
+        #next-button:hover {
+            background-color: #3cb371;
+        }
+        #results {
+            margin-top: 20px;
+            text-align: left;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            overflow-y: scroll;
+            max-height: 400px;
+        }
+        .result-item {
+            margin-bottom: 10px;
+        }
+        #answer-input {
+            padding: 10px;
+            font-size: 18px;
+            width: 80%;
+            max-width: 300px;
+            border: 2px solid #20b2aa;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        #submit-answer {
+            padding: 10px 20px;
+            font-size: 18px;
+            margin-top: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background-color: #20b2aa;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        #submit-answer:hover {
+            background-color: #3cb371;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 시작 화면 -->
+    <div id="start-screen" class="visible">
+        <h1>약수 및 최대공약수 게임</h1>
+        <h2>난이도를 선택하세요</h2>
+        <button class="button" onclick="startGame('highest')">최상</button>
+        <button class="button" onclick="startGame('high')">상</button>
+        <button class="button" onclick="startGame('medium')">중</button>
+        <button class="button" onclick="startGame('low')">하</button>
+    </div>
+
+    <!-- 게임 화면 -->
+    <div id="game-screen">
+        <h1>약수 및 최대공약수 게임</h1>
+        <div id="energy-bar">
+            <div id="energy"></div>
+        </div>
+        <div id="question-container">
+            <!-- 현재 문제가 여기 표시됩니다 -->
+        </div>
+        <div id="message"></div>
+        <button id="next-button" onclick="nextQuestion()">다음 문제</button>
+        <div id="stats">
+            <p>점수: <span id="score">0</span></p>
+            <p>남은 기회: <span id="lives">3</span></p>
+            <p>총 게임 시간: <span id="game-time">0</span>초</p>
+        </div>
+    </div>
+
+    <!-- 종료 화면 -->
+    <div id="end-screen">
+        <h1>게임 종료!</h1>
+        <p>최종 점수: <span id="final-score">0</span></p>
+        <p>총 게임 시간: <span id="final-time">0</span>초</p>
+        <div id="results">
+            <h2>정답 확인</h2>
+            <!-- 정답 결과가 여기 표시됩니다 -->
+        </div>
+        <button class="button" onclick="restartGame()">다시 시작</button>
+    </div>
+
+    <script>
+        window.onload = function() {
+            // 난이도별 설정
+            const difficultySettings = {
+                'highest': { time: 20, points: 20 },
+                'high': { time: 25, points: 15 },
+                'medium': { time: 30, points: 10 },
+                'low': { time: 35, points: 5 }
+            };
+            let difficulty;
+            let timeLimit;
+            let score = 0;
+            let lives = 3;
+            let totalGameTime = 0;
+            let gameInterval;
+            let energyInterval;
+            let gameStartTime;
+
+            let currentQuestionIndex = 0;
+            let shuffledQuestions = [];
+
+            // 문제 및 정답 데이터 (답이 존재하는 문제만 포함)
+            const problems = [
+                // 문제 1
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 \\(2^2 \\times 3^2\\)과 A의 최대공약수가 \\(2^2 \\times 3\\)이고, 최소공배수가 \\(2^2 \\times 3^2 \\times 5\\)일 때, A의 값을 구하여라.", 
+                    answer: [60] 
+                },
+                // 문제 2
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 \\(3^2 \\times 8\\)과 A의 최대공약수가 \\(3 \\times 8\\)이고, 최소공배수가 \\(2 \\times 3^2 \\times 8^2\\)일 때, A의 값을 구하여라.", 
+                    answer: [384] 
+                },
+                // 문제 3
+                { 
+                    type: 'SAQ', 
+                    question: "두 수 A와 \\(2^2 \\times 3^6 \\times 8\\)의 최대공약수가 \\(2^2 \\times 3^5\\)이고, 최소공배수가 \\(2^5 \\times 3^6 \\times 8\\)일 때, A의 값을 구하여라.", 
+                    answer: [7776] 
+                },
+                // 문제 4
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 \\(7^4 \\times 2^3\\)과 A의 최대공약수가 \\(2^3\\)이고, 최소공배수가 \\(2^5 \\times 7^5\\)일 때, A의 값을 구하여라.", 
+                    answer: [224] 
+                },
+                // 문제 5 (Invalid, excluded)
+                // 문제 6
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 \\(5^2 \\times 11\\)과 A의 최대공약수가 5이고, 최소공배수가 \\(5^2 \\times 11^2\\)일 때, A의 값을 구하여라.", 
+                    answer: [55] 
+                },
+                // 문제 7
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 \\(2^3 \\times 7\\)과 A의 최대공약수가 7이고, 최소공배수가 \\(2^3 \\times 7^2\\)일 때, A의 값을 구하여라.", 
+                    answer: [49] 
+                },
+                // 문제 8
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 \\(2^2 \\times 3\\)과 A의 최대공약수가 \\(2^2\\)이고, 최소공배수가 \\(2^3 \\times 3\\)일 때, A의 값을 구하여라.", 
+                    answer: [8] 
+                },
+                // 문제 9
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 \\(3^4\\)과 A의 최대공약수가 \\(3^2\\)이고, 최소공배수가 \\(3^4 \\times 7\\)일 때, A의 값을 구하여라.", 
+                    answer: [63] 
+                },
+                // 문제 10
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 \\(8^2\\)과 A의 최대공약수가 8이고, 최소공배수가 \\(8^3\\)일 때, A의 값을 구하여라.", 
+                    answer: [64] 
+                },
+                // 문제 11
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 4과 A의 최대공약수가 2이고, 최소공배수가 12일 때, A의 값을 구하여라.", 
+                    answer: [6] 
+                },
+                // 문제 12
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 \\(2^3\\)과 A의 최대공약수가 \\(2^2\\)이고, 최소공배수가 \\(2^3 \\times 3\\)일 때, A의 값을 구하여라.", 
+                    answer: [12] 
+                },
+                // 문제 13 (Invalid, excluded)
+                // 문제 14 (Invalid, excluded)
+                // 문제 15 (Invalid, excluded)
+                // 문제 16
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 7과 A의 최대공약수가 1이고, 최소공배수가 7일 때, A의 값을 구하여라.", 
+                    answer: [1] 
+                },
+                // 문제 17
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 \\(2 \\times 3\\)과 A의 최대공약수가 1이고, 최소공배수가 6일 때, A의 값을 구하여라.", 
+                    answer: [1] 
+                },
+                // 문제 18
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 5과 A의 최대공약수가 1이고, 최소공배수가 15일 때, A의 값을 구하여라.", 
+                    answer: [3] 
+                },
+                // 문제 19 (Invalid, excluded)
+                // 문제 20 (Invalid, excluded)
+                // 문제 21 (Invalid, excluded)
+                // 문제 22 (Invalid, excluded)
+                // 문제 23 (Invalid, excluded)
+                // 문제 24 (Invalid, excluded)
+                // 문제 25
+                { 
+                    type: 'SAQ', 
+                    question: "두 수의 최대공약수가 12, 최소공배수가 240일 때, A × B를 구하여라.", 
+                    answer: [2880] 
+                },
+                // 문제 26
+                { 
+                    type: 'SAQ', 
+                    question: "자연수 A와 B의 최소공배수가 150이고, 최대공약수가 10일 때, 두 수의 곱을 구하여라.", 
+                    answer: [1500] 
+                },
+                // 문제 27
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 35과 A의 최대공약수가 7이고, 최소공배수가 105일 때, A의 값을 구하여라.", 
+                    answer: [21] 
+                },
+                // 문제 28
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 50과 A의 최대공약수가 10이고, 최소공배수가 150일 때, A의 값을 구하여라.", 
+                    answer: [30] 
+                },
+                // 문제 29
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 \\(5^2 \\times 2^3\\)과 A의 최대공약수가 \\(2^2 \\times 5\\), 최소공배수가 \\(5^2 \\times 2^3 \\times 7\\)일 때, A의 값을 구하여라.", 
+                    answer: [140] 
+                },
+                // 문제 30
+                { 
+                    type: 'SAQ', 
+                    question: "세 자연수 15, A, 35의 최대공약수가 5이고, 최소공배수가 105일 때, A의 값을 구하여라.", 
+                    answer: [5, 15, 35] 
+                },
+                // 문제 33
+                { 
+                    type: 'SAQ', 
+                    question: "세 자연수 A, 60, 75의 최대공약수가 15이고, 최소공배수가 300일 때, A의 값을 구하여라.", 
+                    answer: [15, 30, 60, 75, 150, 300] 
+                },
+                // 문제 34
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 40과 A의 최대공약수가 8이고, 최소공배수가 120일 때, A의 값을 구하여라.", 
+                    answer: [24] 
+                },
+                // 문제 35
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 70과 A의 최대공약수가 10이고, 최소공배수가 210일 때, A의 값을 구하여라.", 
+                    answer: [30] 
+                },
+                // 문제 36
+                { 
+                    type: 'SAQ', 
+                    question: "세 자연수 18, A, 36의 최대공약수가 6이고, 최소공배수가 36일 때, A의 값을 구하여라.", 
+                    answer: [6, 12, 18, 36] 
+                },
+                // 문제 37
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 A와 42의 최대공약수가 14이고, 최소공배수가 84일 때, A의 값을 구하여라.", 
+                    answer: [28] 
+                },
+                // 문제 38
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 21과 A의 최대공약수가 7이고, 최소공배수가 105일 때, A의 값을 구하여라.", 
+                    answer: [35] 
+                },
+                // 문제 39
+                { 
+                    type: 'SAQ', 
+                    question: "두 수의 최대공약수가 12이고, 최소공배수가 180일 때, A × B를 구하여라.", 
+                    answer: [2160] 
+                },
+                // 문제 40
+                { 
+                    type: 'SAQ', 
+                    question: "자연수 A와 45의 최대공약수가 15이고, 최소공배수가 90일 때, A의 값을 구하여라.", 
+                    answer: [30] 
+                },
+                // 문제 41
+                { 
+                    type: 'SAQ', 
+                    question: "세 자연수 72, A, 108의 최대공약수가 36이고, 최소공배수가 216일 때, A의 값을 구하여라.", 
+                    answer: [36, 72, 108, 216] 
+                },
+                // 문제 42
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 30과 A의 최대공약수가 10이고, 최소공배수가 60일 때, A의 값을 구하여라.", 
+                    answer: [20] 
+                },
+                // 문제 43
+                { 
+                    type: 'SAQ', 
+                    question: "두 자연수 84와 A의 최대공약수가 12이고, 최소공배수가 252일 때, A의 값을 구하여라.", 
+                    answer: [36] 
+                },
+            ];
+
+            // Function to start the game
+            window.startGame = function(selectedDifficulty) {
+                difficulty = selectedDifficulty;
+                timeLimit = difficultySettings[difficulty].time;
+                document.getElementById('start-screen').classList.remove('visible');
+                document.getElementById('game-screen').classList.add('visible');
+                gameStartTime = Date.now();
+                score = 0;
+                lives = 3;
+                totalGameTime = 0;
+                currentQuestionIndex = 0;
+                shuffledQuestions = shuffleArray([...problems]); // 문제 목록 섞기
+                updateStats();
+                renderQuestion();
+                if (difficulty !== 'low') {
+                    startEnergyBar();
+                }
+                gameInterval = setInterval(() => {
+                    totalGameTime = Math.floor((Date.now() - gameStartTime) / 1000);
+                    document.getElementById('game-time').innerText = totalGameTime;
+                }, 1000);
+            }
+
+            // Function to shuffle the questions array and return a new array
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    let j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+
+            // Function to render the current question
+            function renderQuestion() {
+                if (currentQuestionIndex >= shuffledQuestions.length) {
+                    endGame();
+                    return;
+                }
+                const container = document.getElementById('question-container');
+                container.innerHTML = '';
+                const currentQuestion = shuffledQuestions[currentQuestionIndex];
+                const div = document.createElement('div');
+                div.className = 'question-container';
+                div.innerHTML = `
+                    <div class="question">${currentQuestion.question}</div>
+                `;
+                container.appendChild(div);
+                if (currentQuestion.type === 'SAQ') {
+                    // Render input field and submit button
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = 'answer-input';
+                    input.placeholder = '답을 입력하세요';
+                    div.appendChild(input);
+
+                    const submitButton = document.createElement('button');
+                    submitButton.id = 'submit-answer';
+                    submitButton.textContent = '제출';
+                    submitButton.onclick = () => checkAnswer(input.value.trim());
+                    div.appendChild(submitButton);
+                }
+                MathJax.typesetPromise();
+                document.getElementById('message').innerHTML = '';
+            }
+
+            // Function to check the selected answer
+            window.checkAnswer = function(userInput) {
+                const currentQuestion = shuffledQuestions[currentQuestionIndex];
+                let isCorrect = false;
+                let correctAnswers = currentQuestion.answer;
+
+                if (currentQuestion.type === 'SAQ') {
+                    if (typeof correctAnswers === 'number') {
+                        // If the answer is a single number
+                        if (Number(userInput) === correctAnswers) {
+                            isCorrect = true;
+                            score += difficultySettings[difficulty].points;
+                            document.getElementById('message').innerHTML = '정답입니다! 🎉';
+                        } else {
+                            lives--;
+                            document.getElementById('message').innerHTML = `틀렸습니다! 정답은 <strong>${correctAnswers}</strong>입니다. 😢`;
+                        }
+                    } else if (Array.isArray(correctAnswers)) {
+                        // If multiple possible answers
+                        let processedInput = userInput;
+                        // Attempt to parse as number if possible
+                        if (!isNaN(processedInput)) {
+                            processedInput = Number(processedInput);
+                        }
+                        // Check if the input matches any of the correct answers
+                        if (correctAnswers.includes(processedInput)) {
+                            isCorrect = true;
+                            score += difficultySettings[difficulty].points;
+                            document.getElementById('message').innerHTML = '정답입니다! 🎉';
+                        } else {
+                            // For questions with multiple possible answers, display all possible answers
+                            let answersDisplay = correctAnswers.join(', ');
+                            document.getElementById('message').innerHTML = `틀렸습니다! 정답은 <strong>${answersDisplay}</strong>입니다. 😢`;
+                            lives--;
+                        }
+                    }
+                }
+
+                updateStats();
+                highlightAnswer(isCorrect, userInput);
+                disableInput();
+
+                // Show next button after a short delay
+                document.getElementById('next-button').style.display = 'inline-block';
+                if (lives <= 0) {
+                    endGame();
+                }
+            }
+
+            // Function to highlight correct and incorrect answers
+            function highlightAnswer(isCorrect, userInput) {
+                const input = document.getElementById('answer-input');
+                if (isCorrect) {
+                    input.style.borderColor = '#32cd32'; // Green
+                } else {
+                    input.style.borderColor = '#ff6347'; // Red
+                }
+            }
+
+            // Function to disable input after submission
+            function disableInput() {
+                const input = document.getElementById('answer-input');
+                const submitButton = document.getElementById('submit-answer');
+                input.disabled = true;
+                submitButton.disabled = true;
+            }
+
+            // Function to update the stats
+            function updateStats() {
+                document.getElementById('score').innerText = score;
+                document.getElementById('lives').innerText = lives;
+                document.getElementById('game-time').innerText = totalGameTime;
+            }
+
+            // Function to go to the next question
+            window.nextQuestion = function() {
+                currentQuestionIndex++;
+                renderQuestion();
+                if (difficulty !== 'low') {
+                    startEnergyBar();
+                }
+            }
+
+            // Function to end the game
+            function endGame() {
+                clearInterval(gameInterval);
+                clearInterval(energyInterval);
+                document.getElementById('game-screen').classList.remove('visible');
+                document.getElementById('end-screen').classList.add('visible');
+                document.getElementById('final-score').innerText = score;
+                document.getElementById('final-time').innerText = totalGameTime;
+                const resultsContainer = document.getElementById('results');
+                resultsContainer.innerHTML = '<h2>정답 확인</h2>';
+                shuffledQuestions.forEach((q, index) => {
+                    let displayAnswer = '';
+                    if (Array.isArray(q.answer)) {
+                        displayAnswer = q.answer.join(', ');
+                    } else {
+                        displayAnswer = q.answer;
+                    }
+                    resultsContainer.innerHTML += `<div class="result-item">${q.question} <br><strong>정답:</strong> ${displayAnswer}</div>`;
+                });
+            }
+
+            // Function to restart the game
+            window.restartGame = function() {
+                score = 0;
+                lives = 3;
+                totalGameTime = 0;
+                currentQuestionIndex = 0;
+                shuffledQuestions = shuffleArray([...problems]); // 문제 목록 다시 섞기
+                document.getElementById('end-screen').classList.remove('visible');
+                document.getElementById('game-screen').classList.add('visible');
+                updateStats();
+                renderQuestion();
+                if (difficulty !== 'low') {
+                    startEnergyBar();
+                }
+                gameStartTime = Date.now();
+                gameInterval = setInterval(() => {
+                    totalGameTime = Math.floor((Date.now() - gameStartTime) / 1000);
+                    document.getElementById('game-time').innerText = totalGameTime;
+                }, 1000);
+            }
+
+            // Function to start the energy bar
+            function startEnergyBar() {
+                clearInterval(energyInterval);
+                let energyBar = document.getElementById('energy');
+                let width = 100;
+                let decrement = 100 / (timeLimit * 10); // 에너지 바 업데이트 간격에 따라 조정
+
+                energyBar.style.width = '100%';
+                energyInterval = setInterval(() => {
+                    width -= decrement;
+                    if (width <= 0) {
+                        clearInterval(energyInterval);
+                        lives--;
+                        const currentQuestion = shuffledQuestions[currentQuestionIndex];
+                        let correctAnswerDisplay = '';
+                        if (currentQuestion.type === 'SAQ') {
+                            if (Array.isArray(currentQuestion.answer)) {
+                                correctAnswerDisplay = currentQuestion.answer.join(', ');
+                            } else {
+                                correctAnswerDisplay = currentQuestion.answer;
+                            }
+                        }
+                        document.getElementById('message').innerHTML = `시간 초과! 정답은 <strong>${correctAnswerDisplay}</strong>입니다. 😮`;
+                        updateStats();
+                        disableInput();
+                        document.getElementById('next-button').style.display = 'inline-block';
+                        if (lives <= 0) {
+                            endGame();
+                        }
+                    } else {
+                        energyBar.style.width = width + '%';
+                    }
+                }, 100); // 0.1초마다 에너지 바 업데이트
+            }
+        };
+    </script>
+
+</body>
+</html>
